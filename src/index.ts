@@ -445,6 +445,7 @@ export interface JarvisStreamOptions {
   save?: boolean;      // Save message or not (default true)
   pa?: boolean;        // Force the message to be proactive, overriding NLU (default false)
   nlu?: boolean;       // Run message through NLU to determine if it's for jarvis (default false)
+  nlu_config?: any;    // NLU configuration object for server speedup (avoids DB queries)
   lat?: number;        // Latitude parameter
   lon?: number;        // Longitude parameter  
   media?: string;      // URLs separated by commas for vision models

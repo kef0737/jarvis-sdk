@@ -29,6 +29,18 @@ async function manualTest() {
     
     const stream = client.jarvis.stream.jarvis("Jarvis, you there? Testing out this new SDK i'm making for you. Easy way to build interfaces.", {
       dt: Math.floor(new Date().getTime() / 1000),
+      nlu: true,
+      nlu_config: {
+        "proactivity": {
+          "level": 1
+        },
+        "names": [
+          "Kristian",
+          "kef",
+          "kristian edward fosberry",
+          "Chris"
+        ]
+      }
     });
 
     // Set up event handlers
