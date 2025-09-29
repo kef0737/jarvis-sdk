@@ -56,6 +56,9 @@ async function manualTest() {
           // console.log(`💭 Interim thoughts ${thoughts}`);
         }
       })
+      .onNLU((nluResult, data) => {
+        console.log('🧠 NLU Result:', nluResult.nlu.result);
+      })
       .onError((error) => {
         console.log('❌ Stream error:', error.message);
       })

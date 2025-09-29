@@ -53,6 +53,12 @@ export interface ThoughtsData {
   reflection?: string;
 }
 
+export interface NLUResult {
+  nlu: {
+    result: string;
+  };
+}
+
 // Event handler types
 export type OutputHandler = (content: string, data?: any) => void;
 export type ToolCallsHandler = (toolCalls: any[], data?: any) => void;
@@ -61,6 +67,7 @@ export type MCPCallHandler = (mcpCall: MCPCall) => void;
 export type McpToolCallsHandler = (mcpToolCalls: any[], data?: any) => void;
 export type ThoughtsHandler = (thoughts: any, metadata: { isFinal: boolean, data?: any }) => void;
 export type ResponseHandler = (response: string, metadata: { isFinal: boolean, data?: any }) => void;
+export type NLUHandler = (nluResult: NLUResult, data?: any) => void;
 export type ErrorHandler = (error: Error | string) => void;
 export type DoneHandler = () => void;
 
@@ -72,6 +79,7 @@ export class JarvisStream {
   private mcpToolCallsHandlers: McpToolCallsHandler[] = [];
   private thoughtsHandlers: ThoughtsHandler[] = [];
   private responseHandlers: ResponseHandler[] = [];
+  private nluHandlers: NLUHandler[] = [];
   private errorHandlers: ErrorHandler[] = [];
   private doneHandlers: DoneHandler[] = [];
   
@@ -121,6 +129,11 @@ export class JarvisStream {
 
   onResponse(handler: ResponseHandler): this {
     this.responseHandlers.push(handler);
+    return this;
+  }
+
+  onNLU(handler: NLUHandler): this {
+    this.nluHandlers.push(handler);
     return this;
   }
 
@@ -320,6 +333,11 @@ export class JarvisStream {
       );
     }
     
+    // Handle NLU results - API sends: { nlu: { result: string } }
+    if (data.nlu) {
+      this.nluHandlers.forEach(handler => handler(data, data));
+    }
+    
     // Legacy handlers for backward compatibility
     // Handle text output/content
     if (data.content || data.text || data.message) {
@@ -393,6 +411,10 @@ export class JarvisStream {
           this.responseHandlers.forEach(handler => 
             handler(data.content || data.data || '', { isFinal: true, data })
           );
+          break;
+        
+        case 'nlu':
+          this.nluHandlers.forEach(handler => handler(data.data || data, data));
           break;
         
         case 'error':
