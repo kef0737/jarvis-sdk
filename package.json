@@ -1,12 +1,42 @@
 {
   "name": "@jarvis-online-api/jarvis-sdk",
   "version": "0.1.0",
+  "description": "Official JavaScript/TypeScript SDK for Jarvis AI with streaming support",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/src/**/*",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
-    "test": "jest"
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "jarvis",
+    "ai",
+    "sdk",
+    "streaming",
+    "typescript",
+    "javascript"
+  ],
+  "author": "kef0737",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kef0737/jarvis-sdk.git"
+  },
+  "homepage": "https://github.com/kef0737/jarvis-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/kef0737/jarvis-sdk/issues"
   },
   "devDependencies": {
     "typescript": "^5.2.2",
