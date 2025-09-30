@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis SDK Legacy Migration Demo</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 10px 0; }
+        .output { background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .error { background: #ffe8e8; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        button { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #005a8b; }
+        input { width: 60%; padding: 8px; margin: 5px; }
+        .log { background: #f0f0f0; padding: 10px; border-radius: 5px; margin: 5px 0; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🤖 Jarvis SDK Legacy Migration Demo</h1>
+    
+    <div class="container">
+        <h2>Test the New SDK</h2>
+        <input type="text" id="userInput" placeholder="Enter your message..." value="Hello, testing the new SDK!">
+        <select id="inputMode">
+            <option value="text">Text Mode</option>
+            <option value="voice">Voice Mode</option>
+        </select>
+        <br>
+        <label><input type="checkbox" id="nluEnabled"> Enable NLU</label>
+        <label><input type="checkbox" id="proactiveMode"> Proactive Mode</label>
+        <br><br>
+        <button onclick="testSDK()">Send Message</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <div id="output"></div>
+    <div id="logs"></div>
+
+    <script type="module">
+        // Import the SDK (in a real app, you'd install via npm)
+        import { JarvisClient } from '../dist/src/index.js';
+
+        // Global variables for demo
+        window.client = new JarvisClient({
+            baseUrl: window.location.host === "localhost:8888" 
+                ? 'http://localhost:3000/api' 
+                : 'https://jarvis-online.vercel.app/api',
+            apiKey: "89045099" // Demo key
+        });
+
+        window.logs = [];
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            window.logs.push({ timestamp, message, type });
+            updateLogDisplay();
+        }
+
+        function updateLogDisplay() {
+            const logsDiv = document.getElementById('logs');
+            logsDiv.innerHTML = window.logs.map(log => 
+                `<div class="log ${log.type}">[${log.timestamp}] ${log.message}</div>`
+            ).join('');
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function updateOutput(content, type = 'output') {
+            const outputDiv = document.getElementById('output');
+            outputDiv.innerHTML = `<div class="${type}">${content}</div>`;
+        }
+
+        // Migration function using the new SDK
+        window.testSDK = async function() {
+            const input = document.getElementById('userInput').value;
+            const mode = document.getElementById('inputMode').value;
+            const nluEnabled = document.getElementById('nluEnabled').checked;
+            const proactiveMode = document.getElementById('proactiveMode').checked;
+
+            if (!input.trim()) {
+                addLog('Please enter a message', 'error');
+                return;
+            }
+
+            addLog(`Starting ${mode} mode request: "${input}"`);
+            updateOutput('🔄 Processing...', 'output');
+
+            try {
+                // Get location if available
+                let lat = "";
+                let lon = "";
+                if (navigator.geolocation) {
+                    try {
+                        const position = await new Promise((resolve, reject) => {
+                            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+                        });
+                        lat = position.coords.latitude;
+                        lon = position.coords.longitude;
+                        addLog(`Location: ${lat}, ${lon}`);
+                    } catch (error) {
+                        addLog('Could not get location: ' + error.message, 'error');
+                    }
+                }
+
+                // Configure stream options
+                const streamOptions = {
+                    speech: mode === "voice",
+                    dt: Math.floor(Date.now() / 1000),
+                    pa: proactiveMode,
+                    lat: lat,
+                    lon: lon,
+                    nlu: nluEnabled,
+                    nlu_config: nluEnabled ? {
+                        "proactivity": { "level": 1 },
+                        "names": ["Demo User", "Tester"]
+                    } : undefined
+                };
+
+                addLog('Stream options: ' + JSON.stringify(streamOptions, null, 2));
+
+                // Create the stream
+                const stream = window.client.jarvis.stream.jarvis(input, streamOptions);
+                addLog('Stream URL: ' + stream.url);
+
+                let finalOutput = "";
+
+                // Set up event handlers
+                stream
+                    .onResponse((response, { isFinal, data }) => {
+                        addLog(`Response (${isFinal ? 'Final' : 'Interim'}): ${response}`);
+                        finalOutput = response;
+                        updateOutput(`✅ ${response}`, 'output');
+                    })
+                    .onNLU((nluResult, data) => {
+                        addLog('NLU Result: ' + JSON.stringify(nluResult));
+                    })
+                    .onToolCall((toolCall) => {
+                        addLog('Tool Call: ' + JSON.stringify(toolCall));
+                    })
+                    .onOutput((content, data) => {
+                        if (data?.audio_chunk && mode === "voice") {
+                            addLog('Received audio chunk');
+                        }
+                        if (data?.frames && data.frames.length > 0) {
+                            addLog('Received frames: ' + data.frames.length);
+                        }
+                        if (data?.lf) {
+                            addLog('Local functions: ' + data.lf);
+                        }
+                    })
+                    .onThoughts((thoughts, { isFinal }) => {
+                        addLog(`Thoughts (${isFinal ? 'Final' : 'Interim'}): ${thoughts}`);
+                    })
+                    .onError((error) => {
+                        addLog('Stream Error: ' + error.message, 'error');
+                        updateOutput('❌ Error: ' + error.message, 'error');
+                    })
+                    .onDone(() => {
+                        addLog('Stream completed successfully');
+                        if (finalOutput) {
+                            updateOutput(`✅ Final: ${finalOutput}`, 'output');
+                        }
+                    });
+
+                // Start the stream
+                await stream.start();
+
+            } catch (error) {
+                addLog('Error: ' + error.message, 'error');
+                updateOutput('❌ Error: ' + error.message, 'error');
+            }
+        };
+
+        window.clearLogs = function() {
+            window.logs = [];
+            updateLogDisplay();
+            updateOutput('', 'output');
+        };
+
+        // Add some initial logs
+        addLog('SDK Demo initialized');
+        addLog('Client configured for: ' + window.client.getConfig().baseUrl);
+    </script>
+
+    <div class="container">
+        <h3>📚 Migration Notes</h3>
+        <p><strong>Key Changes from Legacy Function:</strong></p>
+        <ul>
+            <li>✅ Uses fluent API: <code>client.jarvis.stream.jarvis(input, options)</code></li>
+            <li>✅ Cleaner event handling with <code>.onResponse()</code>, <code>.onNLU()</code>, etc.</li>
+            <li>✅ Automatic URL building and parameter encoding</li>
+            <li>✅ Built-in TypeScript support and better error handling</li>
+            <li>✅ All URL parameters now properly typed in <code>JarvisStreamOptions</code></li>
+        </ul>
+        
+        <p><strong>New Parameters Available:</strong></p>
+        <code>interrim, speech, model, convo_updates, save, pa, nlu, nlu_config, lat, lon, media, dt</code>
+    </div>
+</body>
+</html>

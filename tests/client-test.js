@@ -27,20 +27,10 @@ async function manualTest() {
 
     console.log('\n2. Testing streaming jarvis request with event handlers and new parameters:');
     
-    const stream = client.jarvis.stream.jarvis("Jarvis, you there? Testing out this new SDK i'm making for you. Easy way to build interfaces.", {
+    const stream = client.jarvis.stream.jarvis("Hello Jarvis, just testing the SDK", {
       dt: Math.floor(new Date().getTime() / 1000),
-      nlu: true,
-      nlu_config: {
-        "proactivity": {
-          "level": 1
-        },
-        "names": [
-          "Kristian",
-          "kef",
-          "kristian edward fosberry",
-          "Chris"
-        ]
-      }
+      nlu: false,  // Disable NLU to avoid server errors
+      speech: false
     });
 
     // Set up event handlers
@@ -67,6 +57,9 @@ async function manualTest() {
         } else {
           // console.log(`💭 Interim thoughts ${thoughts}`);
         }
+      })
+      .onConversation((conversation, data) => {
+        console.log('💬 Conversation updated:', conversation.length, 'messages');
       })
       .onNLU((nluResult, data) => {
         console.log('🧠 NLU Result:', nluResult.nlu.result);

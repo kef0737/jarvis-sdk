@@ -68,6 +68,7 @@ export type McpToolCallsHandler = (mcpToolCalls: any[], data?: any) => void;
 export type ThoughtsHandler = (thoughts: any, metadata: { isFinal: boolean, data?: any }) => void;
 export type ResponseHandler = (response: string, metadata: { isFinal: boolean, data?: any }) => void;
 export type NLUHandler = (nluResult: NLUResult, data?: any) => void;
+export type ConversationHandler = (conversation: any[], data?: any) => void;
 export type ErrorHandler = (error: Error | string) => void;
 export type DoneHandler = () => void;
 
@@ -80,6 +81,7 @@ export class JarvisStream {
   private thoughtsHandlers: ThoughtsHandler[] = [];
   private responseHandlers: ResponseHandler[] = [];
   private nluHandlers: NLUHandler[] = [];
+  private conversationHandlers: ConversationHandler[] = [];
   private errorHandlers: ErrorHandler[] = [];
   private doneHandlers: DoneHandler[] = [];
   
@@ -134,6 +136,11 @@ export class JarvisStream {
 
   onNLU(handler: NLUHandler): this {
     this.nluHandlers.push(handler);
+    return this;
+  }
+
+  onConversation(handler: ConversationHandler): this {
+    this.conversationHandlers.push(handler);
     return this;
   }
 
@@ -338,6 +345,11 @@ export class JarvisStream {
       this.nluHandlers.forEach(handler => handler(data, data));
     }
     
+    // Handle conversation updates - API sends: { convo: [...] }
+    if (data.convo) {
+      this.conversationHandlers.forEach(handler => handler(data.convo, data));
+    }
+    
     // Legacy handlers for backward compatibility
     // Handle text output/content
     if (data.content || data.text || data.message) {
@@ -415,6 +427,10 @@ export class JarvisStream {
         
         case 'nlu':
           this.nluHandlers.forEach(handler => handler(data.data || data, data));
+          break;
+        
+        case 'conversation':
+          this.conversationHandlers.forEach(handler => handler(data.data || data.convo || data.conversation || [], data));
           break;
         
         case 'error':
