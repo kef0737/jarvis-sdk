@@ -34,8 +34,9 @@ async function streamWithAudio(message: string) {
           console.log('Interim response:', response);
         }
       })
-      .onDone(async () => {
+      .onDone(async (doneEvent) => {
         console.log(`Stream completed with ${audioChunks.length} audio chunks`);
+        console.log('Done type:', doneEvent.type); // 'output', 'tts', or '*'
         
         // Process audio chunks if available
         if (audioChunks.length > 0) {

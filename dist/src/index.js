@@ -103,7 +103,7 @@ export class JarvisStream {
         while (this.isStreaming) {
             const { done, value } = await reader.read();
             if (done) {
-                this.handleDone();
+                this.handleDone({ type: '*' });
                 break;
             }
             const chunk = decoder.decode(value, { stream: true });
@@ -123,7 +123,7 @@ export class JarvisStream {
         while (this.isStreaming) {
             const { done, value } = await reader.read();
             if (done) {
-                this.handleDone();
+                this.handleDone({ type: '*' });
                 break;
             }
             const chunk = decoder.decode(value, { stream: true });
@@ -158,7 +158,7 @@ export class JarvisStream {
             try {
                 // Handle completion signals
                 if (data === '[DONE]' || data === 'DONE') {
-                    this.handleDone();
+                    this.handleDone({ type: '*' });
                     return;
                 }
                 // Parse JSON data
@@ -232,9 +232,15 @@ export class JarvisStream {
                 : new Error(data.error.message || 'Unknown error');
             this.handleError(error);
         }
-        // Handle completion - API sends: { done: true } or { finished: true }
+        // Handle completion - API sends: { done: { type: 'output' | 'tts' | '*' } } or { done: true } or { finished: true }
         if (data.done || data.finished || data.complete) {
-            this.handleDone();
+            // If done is an object with a type, pass it to handleDone
+            if (typeof data.done === 'object' && data.done !== null) {
+                this.handleDone(data.done);
+            }
+            else {
+                this.handleDone({ type: '*' });
+            }
         }
         // Handle specific event types if your API uses the 'type' field
         if (data.type) {
@@ -286,7 +292,8 @@ export class JarvisStream {
                     break;
                 case 'done':
                 case 'complete':
-                    this.handleDone();
+                    // Pass the full data object to handleDone in case it contains type info
+                    this.handleDone(data.data || data);
                     break;
             }
         }
@@ -294,9 +301,31 @@ export class JarvisStream {
     handleError(error) {
         this.errorHandlers.forEach(handler => handler(error));
     }
-    handleDone() {
-        this.isStreaming = false;
-        this.doneHandlers.forEach(handler => handler());
+    handleDone(doneEvent) {
+        // If doneEvent is not provided or is a boolean/string, create a default event
+        let event;
+        if (!doneEvent || typeof doneEvent === 'boolean' || typeof doneEvent === 'string') {
+            event = { type: '*' };
+        }
+        else if (doneEvent.type) {
+            // Already a proper DoneEvent
+            event = doneEvent;
+        }
+        else if (doneEvent.done) {
+            // Handle { done: { type: '...' } } structure
+            event = doneEvent.done;
+        }
+        else {
+            // Fallback
+            event = { type: '*', ...doneEvent };
+        }
+        // Fire the done handlers
+        this.doneHandlers.forEach(handler => handler(event));
+        // Only stop streaming when we receive the final done event with type "*"
+        // Other done types (e.g., "output", "tts") indicate partial completion
+        if (event.type === '*') {
+            this.isStreaming = false;
+        }
     }
 }
 export class JarvisStreamRequest {

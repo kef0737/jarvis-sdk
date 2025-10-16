@@ -49,6 +49,10 @@ export interface NLUResult {
         result: string;
     };
 }
+export interface DoneEvent {
+    type: 'output' | 'tts' | '*' | string;
+    [key: string]: any;
+}
 export type OutputHandler = (content: string, data?: any) => void;
 export type ToolCallsHandler = (toolCalls: any[], data?: any) => void;
 export type ToolCallHandler = (toolCall: ToolCall) => void;
@@ -66,7 +70,7 @@ export type NLUHandler = (nluResult: NLUResult, data?: any) => void;
 export type ConversationHandler = (conversation: any[], data?: any) => void;
 export type AudioChunkHandler = (audioChunk: string, data?: any) => void;
 export type ErrorHandler = (error: Error | string) => void;
-export type DoneHandler = () => void;
+export type DoneHandler = (doneEvent: DoneEvent) => void;
 export declare class JarvisStream {
     private client;
     private endpoint;

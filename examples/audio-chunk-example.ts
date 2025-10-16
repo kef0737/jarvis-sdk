@@ -27,8 +27,9 @@ stream
       console.log('Interim response:', response);
     }
   })
-  .onDone(() => {
+  .onDone((doneEvent) => {
     console.log('Stream completed!');
+    console.log('Done type:', doneEvent.type); // 'output', 'tts', or '*'
     console.log(`Total audio chunks received: ${audioChunks.length}`);
     
     // Now you can process all audio chunks
