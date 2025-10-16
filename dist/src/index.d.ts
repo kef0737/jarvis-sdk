@@ -64,6 +64,7 @@ export type ResponseHandler = (response: string, metadata: {
 }) => void;
 export type NLUHandler = (nluResult: NLUResult, data?: any) => void;
 export type ConversationHandler = (conversation: any[], data?: any) => void;
+export type AudioChunkHandler = (audioChunk: string, data?: any) => void;
 export type ErrorHandler = (error: Error | string) => void;
 export type DoneHandler = () => void;
 export declare class JarvisStream {
@@ -79,6 +80,7 @@ export declare class JarvisStream {
     private responseHandlers;
     private nluHandlers;
     private conversationHandlers;
+    private audioChunkHandlers;
     private errorHandlers;
     private doneHandlers;
     private abortController;
@@ -94,6 +96,7 @@ export declare class JarvisStream {
     onResponse(handler: ResponseHandler): this;
     onNLU(handler: NLUHandler): this;
     onConversation(handler: ConversationHandler): this;
+    onAudioChunk(handler: AudioChunkHandler): this;
     onError(handler: ErrorHandler): this;
     onDone(handler: DoneHandler): this;
     start(): Promise<void>;

@@ -30,13 +30,13 @@ async function manualTest() {
     const stream = client.jarvis.stream.jarvis("Hello Jarvis, just testing the SDK", {
       dt: Math.floor(new Date().getTime() / 1000),
       nlu: false,  // Disable NLU to avoid server errors
-      speech: false
+      speech: "stream",
     });
 
     // Set up event handlers
     stream
-      .onOutput((content, data) => {
-        console.log('📝 Output:', content);
+      .onAudioChunk((audioChunk, data) => {
+        console.log('🔊 Audio chunk received:', audioChunk.length, 'bytes');
       })
       .onResponse((response, { isFinal, data }) => {
         if (isFinal) {

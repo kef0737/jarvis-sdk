@@ -12,6 +12,7 @@ export class JarvisStream {
         this.responseHandlers = [];
         this.nluHandlers = [];
         this.conversationHandlers = [];
+        this.audioChunkHandlers = [];
         this.errorHandlers = [];
         this.doneHandlers = [];
         this.isStreaming = false;
@@ -51,6 +52,10 @@ export class JarvisStream {
     }
     onConversation(handler) {
         this.conversationHandlers.push(handler);
+        return this;
+    }
+    onAudioChunk(handler) {
+        this.audioChunkHandlers.push(handler);
         return this;
     }
     onError(handler) {
@@ -210,6 +215,10 @@ export class JarvisStream {
         if (data.convo) {
             this.conversationHandlers.forEach(handler => handler(data.convo, data));
         }
+        // Handle audio chunks - API sends: { audio_chunk: string }
+        if (data.audio_chunk) {
+            this.audioChunkHandlers.forEach(handler => handler(data.audio_chunk, data));
+        }
         // Legacy handlers for backward compatibility
         // Handle text output/content
         if (data.content || data.text || data.message) {
@@ -268,6 +277,9 @@ export class JarvisStream {
                     break;
                 case 'conversation':
                     this.conversationHandlers.forEach(handler => handler(data.data || data.convo || data.conversation || [], data));
+                    break;
+                case 'audio_chunk':
+                    this.audioChunkHandlers.forEach(handler => handler(data.data || data.audio_chunk || data.content || '', data));
                     break;
                 case 'error':
                     this.handleError(new Error(data.content || data.message || 'Unknown error'));

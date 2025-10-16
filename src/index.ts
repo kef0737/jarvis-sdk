@@ -69,6 +69,7 @@ export type ThoughtsHandler = (thoughts: any, metadata: { isFinal: boolean, data
 export type ResponseHandler = (response: string, metadata: { isFinal: boolean, data?: any }) => void;
 export type NLUHandler = (nluResult: NLUResult, data?: any) => void;
 export type ConversationHandler = (conversation: any[], data?: any) => void;
+export type AudioChunkHandler = (audioChunk: string, data?: any) => void;
 export type ErrorHandler = (error: Error | string) => void;
 export type DoneHandler = () => void;
 
@@ -82,6 +83,7 @@ export class JarvisStream {
   private responseHandlers: ResponseHandler[] = [];
   private nluHandlers: NLUHandler[] = [];
   private conversationHandlers: ConversationHandler[] = [];
+  private audioChunkHandlers: AudioChunkHandler[] = [];
   private errorHandlers: ErrorHandler[] = [];
   private doneHandlers: DoneHandler[] = [];
   
@@ -141,6 +143,11 @@ export class JarvisStream {
 
   onConversation(handler: ConversationHandler): this {
     this.conversationHandlers.push(handler);
+    return this;
+  }
+
+  onAudioChunk(handler: AudioChunkHandler): this {
+    this.audioChunkHandlers.push(handler);
     return this;
   }
 
@@ -350,6 +357,11 @@ export class JarvisStream {
       this.conversationHandlers.forEach(handler => handler(data.convo, data));
     }
     
+    // Handle audio chunks - API sends: { audio_chunk: string }
+    if (data.audio_chunk) {
+      this.audioChunkHandlers.forEach(handler => handler(data.audio_chunk, data));
+    }
+    
     // Legacy handlers for backward compatibility
     // Handle text output/content
     if (data.content || data.text || data.message) {
@@ -431,6 +443,10 @@ export class JarvisStream {
         
         case 'conversation':
           this.conversationHandlers.forEach(handler => handler(data.data || data.convo || data.conversation || [], data));
+          break;
+        
+        case 'audio_chunk':
+          this.audioChunkHandlers.forEach(handler => handler(data.data || data.audio_chunk || data.content || '', data));
           break;
         
         case 'error':
