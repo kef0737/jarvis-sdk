@@ -503,7 +503,7 @@ export class JarvisStream {
 
 export interface JarvisStreamOptions {
   interrim?: boolean;  // Whether to provide interim results (default true)
-  speech?: boolean;    // Generate speech or not (default false) 
+  speech?: string | null | boolean;    // Generate speech or not (default false) 
   model?: string;      // Force model choice, otherwise user's default (default null)
   convo_updates?: boolean | string; // Send full conversation or just new messages
   save?: boolean;      // Save message or not (default true)
