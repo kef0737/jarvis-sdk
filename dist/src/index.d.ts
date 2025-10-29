@@ -2,6 +2,7 @@ export interface JarvisConfig {
     baseUrl?: string;
     apiKey?: string;
     timeout?: number;
+    client_id?: string;
 }
 export interface TTSResponse {
     audioUrl?: string;
@@ -114,7 +115,7 @@ export declare class JarvisStream {
 }
 export interface JarvisStreamOptions {
     interrim?: boolean;
-    speech?: boolean;
+    speech?: string | boolean;
     model?: string;
     convo_updates?: boolean | string;
     save?: boolean;
@@ -151,10 +152,50 @@ export declare class JarvisRequest {
     get stream(): JarvisStreamRequest;
     jarvis(inputText: string, options?: JarvisStreamOptions): Promise<JarvisResponse>;
 }
+import { SupabaseClient } from '@supabase/supabase-js';
+export declare class realtimeChannelHandler {
+    private handlers;
+    private supabaseClient;
+    private channel;
+    onOutput(handler: (payload: {
+        [key: string]: any;
+        type: "broadcast" | "presence" | "postgres_changes";
+        event: string;
+        payload?: any;
+    }) => void): this;
+    handleMessage(payload: {
+        [key: string]: any;
+        type: "broadcast" | "presence" | "postgres_changes";
+        event: string;
+        payload?: any;
+    }): Promise<void>;
+    private setupSubsriptions;
+    constructor(channel: string, supabaseClient: SupabaseClient);
+}
+export declare class realtime {
+    private client;
+    private supabase;
+    private supabaseClient;
+    private jarvisClient;
+    private channel;
+    handler: realtimeChannelHandler | null;
+    constructor(client: JarvisClient, supabase: SupabaseClient);
+    private updateStatus;
+    connect(): Promise<void>;
+    disconnect(): Promise<void>;
+    send_message(message: {
+        [key: string]: any;
+        type: "broadcast" | "presence" | "postgres_changes";
+        event: string;
+        payload?: any;
+    }): Promise<boolean>;
+}
 export declare class JarvisClient {
     private config;
     private baseUrl;
     readonly jarvis: JarvisRequest;
+    readonly realtime: realtime;
+    private supabaseClient;
     constructor(config?: JarvisConfig);
     /**
      * Generate Text-to-Speech audio from text

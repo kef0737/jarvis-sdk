@@ -100,98 +100,111 @@ async function manualTest() {
       baseUrl: "http://localhost:3000/api",
       timeout: 10000,
       // apiKey: "52455986",
-      apiKey: "89045099"
+      apiKey: "89045099",
+      client_id: "test-instance"
     });
 
-    console.log('Starting manual test for Jarvis SDK...');
-    console.log('Testing the new fluent API:');
+    await client.realtime.connect();
 
-    // // Test 1: Non-streaming request
-    // console.log('\n1. Testing non-streaming jarvis request:');
+    client.realtime.handler.onOutput((payload) => {
+      console.log('Received realtime message:', payload);
+    });
+
+    client.realtime.send_message({ type: "broadcast", event: "broadcast", payload: { message: "Hello from Jarvis SDK!" } });
+
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    await client.realtime.disconnect();
+
+    // console.log('Starting manual test for Jarvis SDK...');
+    // console.log('Testing the new fluent API:');
+
+    // // // Test 1: Non-streaming request
+    // // console.log('\n1. Testing non-streaming jarvis request:');
+    // // try {
+    // //   const response = await client.jarvis.jarvis('Hello, how are you?');
+    // //   console.log('Response:', response);
+    // // } catch (error) {
+    // //   console.log('Non-streaming request failed (expected if server not running):', error.message);
+    // // }
+
+    // // Test 2: Streaming request with event handlers and new parameters
+
+    // console.log('\n2. Testing streaming jarvis request with event handlers and new parameters:');
+    
+    // const stream = client.jarvis.stream.jarvis("Hello Jarvis, just testing the SDK", {
+    //   dt: Math.floor(new Date().getTime() / 1000),
+    //   nlu: false,  // Disable NLU to avoid server errors
+    //   speech: "stream",
+    // });
+
+    // // Collect audio chunks
+    // const audioChunks = [];
+
+    // // Set up event handlers
+    // stream
+    //   .onAudioChunk((audioChunk, data) => {
+    //     console.log('🔊 Audio chunk received:', audioChunk.length, 'bytes');
+    //     audioChunks.push(audioChunk);
+    //   })
+    //   .onResponse((response, { isFinal, data }) => {
+    //     if (isFinal) {
+    //       console.log('✅ Final response:', response);
+    //     } else {
+    //       // console.log('📝 Interim response:', response);
+    //     }
+    //   })
+    //   .onToolCall((toolCall) => {
+    //     console.log('🔧 Tool call:', toolCall);
+    //   })
+    //   .onMcpToolCalls((mcpCall) => {
+    //     console.log('🔌 MCP call:', mcpCall);
+    //   })
+    //   .onThoughts((thoughts, { isFinal }) => {
+    //     if (isFinal) {
+    //       console.log(` 💭 Final thoughts: ${thoughts}`);
+    //     } else {
+    //       // console.log(`💭 Interim thoughts ${thoughts}`);
+    //     }
+    //   })
+    //   .onConversation((conversation, data) => {
+    //     console.log('💬 Conversation updated:', conversation.length, 'messages');
+    //   })
+    //   .onNLU((nluResult, data) => {
+    //     console.log('🧠 NLU Result:', nluResult.nlu.result);
+    //   })
+    //   .onError((error) => {
+    //     console.log('❌ Stream error:', error.message);
+    //   })
+    //   .onDone((doneEvent) => {
+    //     console.log('✅ Stream completed');
+    //     console.log('📍 Done type:', JSON.stringify(doneEvent));
+        
+    //     // Process and save audio chunks if any were received
+    //     if (audioChunks.length > 0) {
+    //       console.log(`\n🎵 Processing ${audioChunks.length} audio chunks...`);
+    //       try {
+    //         // TTS audio is typically 24kHz, not 44.1kHz
+    //         const wavBuffer = combinePCMChunksToWav(audioChunks, 24000);
+    //         const filePath = saveWavToFile(wavBuffer, './audio');
+    //         console.log(`📁 Audio file size: ${(wavBuffer.length / 1024).toFixed(2)} KB`);
+    //       } catch (error) {
+    //         console.error('❌ Failed to save audio:', error.message);
+    //       }
+    //     } else {
+    //       console.log('ℹ️  No audio chunks received');
+    //     }
+    //   });
+
+    // // Start the stream
     // try {
-    //   const response = await client.jarvis.jarvis('Hello, how are you?');
-    //   console.log('Response:', response);
+    //   console.log('Starting stream...', stream.url);
+    //   await stream.start();
     // } catch (error) {
-    //   console.log('Non-streaming request failed (expected if server not running):', error.message);
+    //   console.log('Streaming failed (expected if server not running):', error.message);
     // }
 
-    // Test 2: Streaming request with event handlers and new parameters
-
-    console.log('\n2. Testing streaming jarvis request with event handlers and new parameters:');
-    
-    const stream = client.jarvis.stream.jarvis("Hello Jarvis, just testing the SDK", {
-      dt: Math.floor(new Date().getTime() / 1000),
-      nlu: false,  // Disable NLU to avoid server errors
-      speech: "stream",
-    });
-
-    // Collect audio chunks
-    const audioChunks = [];
-
-    // Set up event handlers
-    stream
-      .onAudioChunk((audioChunk, data) => {
-        console.log('🔊 Audio chunk received:', audioChunk.length, 'bytes');
-        audioChunks.push(audioChunk);
-      })
-      .onResponse((response, { isFinal, data }) => {
-        if (isFinal) {
-          console.log('✅ Final response:', response);
-        } else {
-          // console.log('📝 Interim response:', response);
-        }
-      })
-      .onToolCall((toolCall) => {
-        console.log('🔧 Tool call:', toolCall);
-      })
-      .onMcpToolCalls((mcpCall) => {
-        console.log('🔌 MCP call:', mcpCall);
-      })
-      .onThoughts((thoughts, { isFinal }) => {
-        if (isFinal) {
-          console.log(` 💭 Final thoughts: ${thoughts}`);
-        } else {
-          // console.log(`💭 Interim thoughts ${thoughts}`);
-        }
-      })
-      .onConversation((conversation, data) => {
-        console.log('💬 Conversation updated:', conversation.length, 'messages');
-      })
-      .onNLU((nluResult, data) => {
-        console.log('🧠 NLU Result:', nluResult.nlu.result);
-      })
-      .onError((error) => {
-        console.log('❌ Stream error:', error.message);
-      })
-      .onDone((doneEvent) => {
-        console.log('✅ Stream completed');
-        console.log('📍 Done type:', JSON.stringify(doneEvent));
-        
-        // Process and save audio chunks if any were received
-        if (audioChunks.length > 0) {
-          console.log(`\n🎵 Processing ${audioChunks.length} audio chunks...`);
-          try {
-            // TTS audio is typically 24kHz, not 44.1kHz
-            const wavBuffer = combinePCMChunksToWav(audioChunks, 24000);
-            const filePath = saveWavToFile(wavBuffer, './audio');
-            console.log(`📁 Audio file size: ${(wavBuffer.length / 1024).toFixed(2)} KB`);
-          } catch (error) {
-            console.error('❌ Failed to save audio:', error.message);
-          }
-        } else {
-          console.log('ℹ️  No audio chunks received');
-        }
-      });
-
-    // Start the stream
-    try {
-      console.log('Starting stream...', stream.url);
-      await stream.start();
-    } catch (error) {
-      console.log('Streaming failed (expected if server not running):', error.message);
-    }
-
-    console.log('\nManual test completed successfully.');
+    // console.log('\nManual test completed successfully.');
     
   } catch (error) {
     console.error('Manual test failed:', error);

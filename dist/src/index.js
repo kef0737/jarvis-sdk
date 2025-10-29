@@ -366,6 +366,76 @@ export class JarvisRequest {
         return this.client.apiRequest('/new-jarvis-stream', { input: inputText, ...options });
     }
 }
+import { createClient } from '@supabase/supabase-js';
+export class realtimeChannelHandler {
+    onOutput(handler) {
+        this.handlers.push(handler);
+        return this;
+    }
+    async handleMessage(payload) {
+        this.handlers.forEach(handler => handler(payload));
+    }
+    async setupSubsriptions({ channel, callback = (payload) => { } }) {
+        return new Promise((resolve) => {
+            console.warn(this.channel.state);
+            this.supabaseClient.channel(channel)
+                .on('broadcast', { event: "*" }, (payload) => {
+                callback(payload);
+            })
+                .subscribe((status) => {
+                console.warn('Subscription status:', status);
+                this.supabaseClient.channel("test").send({ type: "broadcast", event: "broadcast", payload: { message: "Hello, Jarvis Realtime!", status } });
+                if (status === 'SUBSCRIBED') {
+                    // send a message 
+                    console.warn('Connected to Supabase Realtime channel.');
+                    this.channel.httpSend("broadcast", { message: "Hello, Jarvis Realtime!" });
+                }
+            });
+        });
+    }
+    constructor(channel, supabaseClient) {
+        this.handlers = [];
+        this.supabaseClient = supabaseClient;
+        this.channel = this.supabaseClient.channel(channel);
+        this.setupSubsriptions({ channel, callback: async (payload) => {
+                console.warn('Received payload in handler:', payload);
+                this.handleMessage(payload);
+            } });
+    }
+}
+export class realtime {
+    constructor(client, supabase) {
+        this.client = client;
+        this.supabase = supabase;
+        this.handler = null;
+        this.jarvisClient = client;
+        this.supabaseClient = supabase;
+        this.channel = this.supabaseClient.channel(String(this.jarvisClient.getConfig().apiKey));
+    }
+    async updateStatus(online) {
+        await this.jarvisClient.apiRequest("clients", { "op": "update", "client_id": this.jarvisClient.getConfig().client_id, status: online ? 'online' : 'offline' }, "POST");
+        await this.channel.send({ type: "broadcast", event: "client-status-update", payload: { client_id: this.jarvisClient.getConfig().client_id, status: online ? 'online' : 'offline' } });
+    }
+    async connect() {
+        await this.updateStatus(true);
+        this.handler = new realtimeChannelHandler(String(this.jarvisClient.getConfig().apiKey), this.supabaseClient);
+    }
+    async disconnect() {
+        await this.updateStatus(false);
+        this.handler = null;
+    }
+    async send_message(message) {
+        try {
+            const res = await this.supabaseClient.channel(String(this.jarvisClient.getConfig().apiKey)).send({ ...message });
+            console.warn(res);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending message:', error);
+            return false;
+        }
+    }
+}
 export class JarvisClient {
     constructor(config = {}) {
         this.config = {
@@ -373,8 +443,10 @@ export class JarvisClient {
             timeout: 30000, // 30 seconds
             ...config
         };
+        this.supabaseClient = createClient("https://qhwitrmufuwsnmkifxdo.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFod2l0cm11ZnV3c25ta2lmeGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA0ODAyODIsImV4cCI6MjA0NjA1NjI4Mn0.7Wp5_AKEUsUGMA3xrJbfU7SMpIHbH3H74y9I2kHJ_0E");
         this.baseUrl = this.config.baseUrl;
         this.jarvis = new JarvisRequest(this);
+        this.realtime = new realtime(this, this.supabaseClient);
     }
     /**
      * Generate Text-to-Speech audio from text
