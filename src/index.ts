@@ -580,17 +580,20 @@ export class realtimeChannelHandler {
 
   private onMessageHandlers: Array<(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void> = [] // handlers for ALL incoming messages
   
-  private onClientMessageHandlers: Array<(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void> = [] // handlers for SPECIFIC incoming messages that are specified for THIS CLIENT
+  private onClientMessageHandlers: Array<(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void> = [] 
 
-  private onWebhookHandlers: Array<(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void> = [] // handlers for SPECIFIC WEBHOOK initated messages
+  private onWebhookHandlers: Array<(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void> = [] 
 
-  private onResponseInitiatorHandlers: Array<(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void> = [] // handlers for SPECIFIC RESPONSE INITIATOR messages
+  private onResponseInitiatorHandlers: Array<(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void> = [] 
 
   private supabaseClient: SupabaseClient;
   private channel: RealtimeChannel;
   private jarvisClient: JarvisClient;
   private realtimeClient: realtime;
 
+
+  // --- Listener Registration Methods (onOutput, onClientMessage, etc.) ---
+  // These are correct as they push to the internal handler arrays.
 
   onOutput(handler: (payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void): this {
     this.onMessageHandlers.push(handler);
@@ -612,68 +615,75 @@ export class realtimeChannelHandler {
     return this;
   }
 
+
+  // --- Message Handling Logic ---
+  // This logic is mostly correct, assuming the event naming conventions are right.
   async handleMessage(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }): Promise<void> {
     
-    console.warn('Handling message payload:', payload);
+    console.warn('Handling message payload:', payload, typeof payload);
       
+    // 1. Always call ALL message handlers
     this.onMessageHandlers.forEach(handler => handler(payload));
 
+    // 2. Check for client-specific messages
     if (payload.event === `client-${this.jarvisClient.getConfig().client_id}`) {
       this.onClientMessageHandlers.forEach(handler => handler( payload ));
     }
 
+    // 3. Check for webhook-initiated messages
     if (payload.event === `webhook-init-client-${this.jarvisClient.getConfig().client_id}`) {
       this.onWebhookHandlers.forEach(handler => handler(payload));
 
-      if (payload.payload && payload.payload.type === "response_initiator") { // check if response initiator
-        // handle response initiator logic here
+      // 4. Check for response initiator within webhook messages
+      if (payload.payload && payload.payload.type === "response_initiator") { 
         this.onResponseInitiatorHandlers.forEach(handler => handler(payload));
       }
-
     }
-
   }
 
-  private async setupSubsriptions({ channel, callback=(payload) => {} } : { channel: string; callback: (payload: any) => void; }): Promise<void> {
 
-    return new Promise((resolve) => {
-      console.warn(this.channel.state)
+  // --- Subscription Setup (FIXED) ---
+  private setupSubscriptions({ callback }: { callback: (payload: any) => void; }): void {
+    // Note: Removed 'channel' argument as 'this.channel' is already set.
+    
+    console.warn(this.channel.state)
 
-      this.supabaseClient.channel(channel)
-        .on('broadcast', { event: "*" } , (payload) => {
-          callback(payload);
-        })
-
-        .subscribe((status) => {
-          console.warn('Subscription status:', status);
-          this.supabaseClient.channel("test").send({ type: "broadcast", event: "broadcast", payload: { message: "Hello, Jarvis Realtime!", status } });
-          if (status === 'SUBSCRIBED') {
-            // send a message 
-            console.warn('Connected to Supabase Realtime channel.');
-            this.channel.httpSend("broadcast", { message: "Hello, Jarvis Realtime!" });
-          }
-        });
-
-    });
-
+    // *** FIX: Use 'this.channel' instead of creating a new one. ***
+    this.channel
+      .on('broadcast', { event: "*" } , (payload) => {
+        callback(payload);
+      })
+      .subscribe((status) => {
+        console.warn('Subscription status:', status);
+        // Removed the temporary "test" channel send. Should use 'this.channel'.
+        if (status === 'SUBSCRIBED') {
+          console.warn('Connected to Supabase Realtime channel.');
+          // You should use this.channel.send for broadcast/presence instead of httpSend
+          this.channel.send({ type: "broadcast", event: "broadcast", payload: { message: "Hello, Jarvis Realtime!", status } }); 
+        }
+      });
   }
 
+  // --- Test Method (Unchanged) ---
   async testWebhookTrigger(client?: string): Promise<void> {
     await this.realtimeClient.send_message({ type: "broadcast", event: `webhook-init-client-${client || this.jarvisClient.getConfig().client_id}`, payload: { type: "response_initiator", message: "This is a test webhook message." }});
   }
 
-  constructor( channel: string, supabaseClient: SupabaseClient, realtimeClient: realtime, jarvisClient: JarvisClient ) {
+  // --- Constructor (FIXED) ---
+  constructor( channelName: string, supabaseClient: SupabaseClient, realtimeClient: realtime, jarvisClient: JarvisClient ) {
     this.supabaseClient = supabaseClient
-    this.channel = this.supabaseClient.channel(channel);
+    // 1. Create and store the *one* channel instance
+    this.channel = this.supabaseClient.channel(channelName);
     this.realtimeClient = realtimeClient;
     this.jarvisClient = jarvisClient;
 
-    this.setupSubsriptions({ channel, callback: async (payload) => {
-      
-      console.warn('Received payload in handler:', payload);
-      await this.handleMessage(payload);
-      
-    } });
+    // 2. Subscribe using the stored channel instance (no need to pass the name)
+    this.setupSubscriptions({ 
+      callback: async (payload) => {
+        console.warn('Received payload in handler:', payload);
+        await this.handleMessage(payload);
+      } 
+    });
   }
 
 }
