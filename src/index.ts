@@ -536,7 +536,6 @@ export class JarvisStreamRequest {
 
   jarvis(inputText: string, options?: JarvisStreamOptions): JarvisStream {
     return new JarvisStream(this.client, '/new-jarvis-stream', {
-      key: this.client.getConfig().apiKey,
       input: inputText,
       ...options,
       stream: true,
@@ -869,7 +868,7 @@ export class JarvisClient {
    * Build URL for EventSource streaming with query parameters
    */
   buildStreamUrl(endpoint: string, data: any): string {
-    let url = `${this.baseUrl}${endpoint}?key=${encodeURIComponent(this.config.apiKey || '')}`;
+    let url = `${this.baseUrl}${endpoint}?key=${encodeURIComponent(this.getConfig().apiKey || '')}`;
     
     // Add data as query parameters
     Object.keys(data).forEach(key => {
