@@ -154,10 +154,27 @@ export declare class JarvisRequest {
 }
 import { SupabaseClient } from '@supabase/supabase-js';
 export declare class realtimeChannelHandler {
-    private handlers;
+    private onMessageHandlers;
+    private onClientMessageHandlers;
+    private onWebhookHandlers;
+    private onResponseInitiatorHandlers;
     private supabaseClient;
     private channel;
+    private jarvisClient;
+    private realtimeClient;
     onOutput(handler: (payload: {
+        [key: string]: any;
+        type: "broadcast" | "presence" | "postgres_changes";
+        event: string;
+        payload?: any;
+    }) => void): this;
+    onClientMessage(handler: (payload: {
+        [key: string]: any;
+        type: "broadcast" | "presence" | "postgres_changes";
+        event: string;
+        payload?: any;
+    }) => void): this;
+    onWebhook(handler: (payload: {
         [key: string]: any;
         type: "broadcast" | "presence" | "postgres_changes";
         event: string;
@@ -170,14 +187,14 @@ export declare class realtimeChannelHandler {
         payload?: any;
     }): Promise<void>;
     private setupSubsriptions;
-    constructor(channel: string, supabaseClient: SupabaseClient);
+    constructor(channel: string, supabaseClient: SupabaseClient, realtimeClient: realtime, jarvisClient: JarvisClient);
 }
 export declare class realtime {
     private client;
     private supabase;
     private supabaseClient;
     private jarvisClient;
-    private channel;
+    status: "online" | "offline";
     handler: realtimeChannelHandler | null;
     constructor(client: JarvisClient, supabase: SupabaseClient);
     private updateStatus;

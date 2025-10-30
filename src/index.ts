@@ -578,18 +578,54 @@ import { createClient, REALTIME_CHANNEL_STATES, RealtimeChannel, SupabaseClient 
 
 export class realtimeChannelHandler {
 
-  private handlers: Array<(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void> = []
+  private onMessageHandlers: Array<(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void> = [] // handlers for ALL incoming messages
+  
+  private onClientMessageHandlers: Array<(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void> = [] // handlers for SPECIFIC incoming messages that are specified for THIS CLIENT
+
+  private onWebhookHandlers: Array<(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void> = [] // handlers for SPECIFIC WEBHOOK initated messages
+
+  private onResponseInitiatorHandlers: Array<(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void> = [] // handlers for SPECIFIC RESPONSE INITIATOR messages
+
   private supabaseClient: SupabaseClient;
   private channel: RealtimeChannel;
+  private jarvisClient: JarvisClient;
+  private realtimeClient: realtime;
 
 
   onOutput(handler: (payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void): this {
-    this.handlers.push(handler);
+    this.onMessageHandlers.push(handler);
+    return this;
+  }
+
+  onClientMessage(handler: (payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void): this {
+    this.onClientMessageHandlers.push(handler);
+    return this;
+  }
+
+  onWebhook(handler: (payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void): this {
+    this.onWebhookHandlers.push(handler);
     return this;
   }
 
   async handleMessage(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }): Promise<void> {
-    this.handlers.forEach(handler => handler(payload));
+    
+    
+    this.onMessageHandlers.forEach(handler => handler(payload));
+
+    if (payload.event === `client-${this.jarvisClient.getConfig().client_id}`) {
+      this.onClientMessageHandlers.forEach(handler => handler( payload ));
+    }
+
+    if (payload.event === `webhook-init-client-${this.jarvisClient.getConfig().client_id}`) {
+      this.onWebhookHandlers.forEach(handler => handler(payload));
+
+      if (payload.payload && payload.payload.type === "response_initiator") { // check if response initiator
+        // handle response initiator logic here
+        this.onResponseInitiatorHandlers.forEach(handler => handler(payload));
+      }
+
+    }
+
   }
 
   private async setupSubsriptions({ channel, callback=(payload) => {} } : { channel: string; callback: (payload: any) => void; }): Promise<void> {
@@ -616,14 +652,17 @@ export class realtimeChannelHandler {
 
   }
 
-  constructor( channel: string, supabaseClient: SupabaseClient ) {
+  constructor( channel: string, supabaseClient: SupabaseClient, realtimeClient: realtime, jarvisClient: JarvisClient ) {
     this.supabaseClient = supabaseClient
-
     this.channel = this.supabaseClient.channel(channel);
+    this.realtimeClient = realtimeClient;
+    this.jarvisClient = jarvisClient;
 
     this.setupSubsriptions({ channel, callback: async (payload) => {
+      
       console.warn('Received payload in handler:', payload);
       this.handleMessage(payload);
+      
     } });
   }
 
@@ -632,23 +671,23 @@ export class realtimeChannelHandler {
 export class realtime {
   private supabaseClient: SupabaseClient;
   private jarvisClient: JarvisClient;
-  private channel: RealtimeChannel;
+  public status: "online" | "offline" = "offline";
   handler: realtimeChannelHandler | null = null;
   
   constructor(private client: JarvisClient, private supabase: SupabaseClient) {
     this.jarvisClient = client;
     this.supabaseClient = supabase;
-    this.channel = this.supabaseClient.channel(String(this.jarvisClient.getConfig().apiKey));
   }
 
   private async updateStatus(online: boolean): Promise<void> {
+    this.status = online ? "online" : "offline";
     await this.jarvisClient.apiRequest("clients", { "op": "update", "client_id": this.jarvisClient.getConfig().client_id, status: online ? 'online' : 'offline' }, "POST")
-    await this.channel.send({ type: "broadcast", event: "client-status-update", payload: { client_id: this.jarvisClient.getConfig().client_id, status: online ? 'online' : 'offline' } });
+    // await this.channel.send({ type: "broadcast", event: "client-status-update", payload: { client_id: this.jarvisClient.getConfig().client_id, status: online ? 'online' : 'offline' } });
   }
 
   async connect(): Promise<void> {
     await this.updateStatus(true);
-    this.handler = new realtimeChannelHandler( String(this.jarvisClient.getConfig().apiKey), this.supabaseClient );
+    this.handler = new realtimeChannelHandler( String(this.jarvisClient.getConfig().apiKey), this.supabaseClient, this, this.jarvisClient );
   }
 
   async disconnect(): Promise<void> {

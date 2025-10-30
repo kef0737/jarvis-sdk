@@ -369,11 +369,29 @@ export class JarvisRequest {
 import { createClient } from '@supabase/supabase-js';
 export class realtimeChannelHandler {
     onOutput(handler) {
-        this.handlers.push(handler);
+        this.onMessageHandlers.push(handler);
+        return this;
+    }
+    onClientMessage(handler) {
+        this.onClientMessageHandlers.push(handler);
+        return this;
+    }
+    onWebhook(handler) {
+        this.onWebhookHandlers.push(handler);
         return this;
     }
     async handleMessage(payload) {
-        this.handlers.forEach(handler => handler(payload));
+        this.onMessageHandlers.forEach(handler => handler(payload));
+        if (payload.event === `client-${this.jarvisClient.getConfig().client_id}`) {
+            this.onClientMessageHandlers.forEach(handler => handler(payload));
+        }
+        if (payload.event === `webhook-init-client-${this.jarvisClient.getConfig().client_id}`) {
+            this.onWebhookHandlers.forEach(handler => handler(payload));
+            if (payload.payload && payload.payload.type === "response_initiator") { // check if response initiator
+                // handle response initiator logic here
+                this.onResponseInitiatorHandlers.forEach(handler => handler(payload));
+            }
+        }
     }
     async setupSubsriptions({ channel, callback = (payload) => { } }) {
         return new Promise((resolve) => {
@@ -393,10 +411,15 @@ export class realtimeChannelHandler {
             });
         });
     }
-    constructor(channel, supabaseClient) {
-        this.handlers = [];
+    constructor(channel, supabaseClient, realtimeClient, jarvisClient) {
+        this.onMessageHandlers = []; // handlers for ALL incoming messages
+        this.onClientMessageHandlers = []; // handlers for SPECIFIC incoming messages that are specified for THIS CLIENT
+        this.onWebhookHandlers = []; // handlers for SPECIFIC WEBHOOK initated messages
+        this.onResponseInitiatorHandlers = []; // handlers for SPECIFIC RESPONSE INITIATOR messages
         this.supabaseClient = supabaseClient;
         this.channel = this.supabaseClient.channel(channel);
+        this.realtimeClient = realtimeClient;
+        this.jarvisClient = jarvisClient;
         this.setupSubsriptions({ channel, callback: async (payload) => {
                 console.warn('Received payload in handler:', payload);
                 this.handleMessage(payload);
@@ -407,18 +430,19 @@ export class realtime {
     constructor(client, supabase) {
         this.client = client;
         this.supabase = supabase;
+        this.status = "offline";
         this.handler = null;
         this.jarvisClient = client;
         this.supabaseClient = supabase;
-        this.channel = this.supabaseClient.channel(String(this.jarvisClient.getConfig().apiKey));
     }
     async updateStatus(online) {
+        this.status = online ? "online" : "offline";
         await this.jarvisClient.apiRequest("clients", { "op": "update", "client_id": this.jarvisClient.getConfig().client_id, status: online ? 'online' : 'offline' }, "POST");
-        await this.channel.send({ type: "broadcast", event: "client-status-update", payload: { client_id: this.jarvisClient.getConfig().client_id, status: online ? 'online' : 'offline' } });
+        // await this.channel.send({ type: "broadcast", event: "client-status-update", payload: { client_id: this.jarvisClient.getConfig().client_id, status: online ? 'online' : 'offline' } });
     }
     async connect() {
         await this.updateStatus(true);
-        this.handler = new realtimeChannelHandler(String(this.jarvisClient.getConfig().apiKey), this.supabaseClient);
+        this.handler = new realtimeChannelHandler(String(this.jarvisClient.getConfig().apiKey), this.supabaseClient, this, this.jarvisClient);
     }
     async disconnect() {
         await this.updateStatus(false);
