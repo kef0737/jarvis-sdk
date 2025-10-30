@@ -334,6 +334,7 @@ export class JarvisStreamRequest {
     }
     jarvis(inputText, options) {
         return new JarvisStream(this.client, '/new-jarvis-stream', {
+            key: this.client.getConfig().apiKey,
             input: inputText,
             ...options,
             stream: true,
