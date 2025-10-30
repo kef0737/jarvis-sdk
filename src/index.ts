@@ -607,6 +607,11 @@ export class realtimeChannelHandler {
     return this;
   }
 
+  onResponseInitiator(handler: (payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }) => void): this {
+    this.onResponseInitiatorHandlers.push(handler);
+    return this;
+  }
+
   async handleMessage(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }): Promise<void> {
     
     

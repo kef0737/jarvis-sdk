@@ -380,6 +380,10 @@ export class realtimeChannelHandler {
         this.onWebhookHandlers.push(handler);
         return this;
     }
+    onResponseInitiator(handler) {
+        this.onResponseInitiatorHandlers.push(handler);
+        return this;
+    }
     async handleMessage(payload) {
         this.onMessageHandlers.forEach(handler => handler(payload));
         if (payload.event === `client-${this.jarvisClient.getConfig().client_id}`) {

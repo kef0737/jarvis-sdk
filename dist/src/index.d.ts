@@ -180,6 +180,12 @@ export declare class realtimeChannelHandler {
         event: string;
         payload?: any;
     }) => void): this;
+    onResponseInitiator(handler: (payload: {
+        [key: string]: any;
+        type: "broadcast" | "presence" | "postgres_changes";
+        event: string;
+        payload?: any;
+    }) => void): this;
     handleMessage(payload: {
         [key: string]: any;
         type: "broadcast" | "presence" | "postgres_changes";
