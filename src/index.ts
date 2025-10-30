@@ -614,7 +614,8 @@ export class realtimeChannelHandler {
 
   async handleMessage(payload: { [key: string]: any; type: "broadcast" | "presence" | "postgres_changes"; event: string; payload?: any; }): Promise<void> {
     
-    
+    console.warn('Handling message payload:', payload);
+      
     this.onMessageHandlers.forEach(handler => handler(payload));
 
     if (payload.event === `client-${this.jarvisClient.getConfig().client_id}`) {
@@ -657,6 +658,10 @@ export class realtimeChannelHandler {
 
   }
 
+  async testWebhookTrigger(client?: string): Promise<void> {
+    await this.realtimeClient.send_message({ type: "broadcast", event: `webhook-init-client-${client || this.jarvisClient.getConfig().client_id}`, payload: { type: "response_initiator", message: "This is a test webhook message." }});
+  }
+
   constructor( channel: string, supabaseClient: SupabaseClient, realtimeClient: realtime, jarvisClient: JarvisClient ) {
     this.supabaseClient = supabaseClient
     this.channel = this.supabaseClient.channel(channel);
@@ -666,7 +671,7 @@ export class realtimeChannelHandler {
     this.setupSubsriptions({ channel, callback: async (payload) => {
       
       console.warn('Received payload in handler:', payload);
-      this.handleMessage(payload);
+      await this.handleMessage(payload);
       
     } });
   }

@@ -385,6 +385,7 @@ export class realtimeChannelHandler {
         return this;
     }
     async handleMessage(payload) {
+        console.warn('Handling message payload:', payload);
         this.onMessageHandlers.forEach(handler => handler(payload));
         if (payload.event === `client-${this.jarvisClient.getConfig().client_id}`) {
             this.onClientMessageHandlers.forEach(handler => handler(payload));
@@ -415,6 +416,9 @@ export class realtimeChannelHandler {
             });
         });
     }
+    async testWebhookTrigger(client) {
+        await this.realtimeClient.send_message({ type: "broadcast", event: `webhook-init-client-${client || this.jarvisClient.getConfig().client_id}`, payload: { type: "response_initiator", message: "This is a test webhook message." } });
+    }
     constructor(channel, supabaseClient, realtimeClient, jarvisClient) {
         this.onMessageHandlers = []; // handlers for ALL incoming messages
         this.onClientMessageHandlers = []; // handlers for SPECIFIC incoming messages that are specified for THIS CLIENT
@@ -426,7 +430,7 @@ export class realtimeChannelHandler {
         this.jarvisClient = jarvisClient;
         this.setupSubsriptions({ channel, callback: async (payload) => {
                 console.warn('Received payload in handler:', payload);
-                this.handleMessage(payload);
+                await this.handleMessage(payload);
             } });
     }
 }

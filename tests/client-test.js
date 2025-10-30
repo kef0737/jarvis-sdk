@@ -110,6 +110,8 @@ async function manualTest() {
       console.log('Received realtime message:', payload);
     });
 
+    await client.realtime.handler.testWebhookTrigger("jarvis-ui-device-66vf2x56f");
+
     client.realtime.send_message({ type: "broadcast", event: "broadcast", payload: { message: "Hello from Jarvis SDK!" } });
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
