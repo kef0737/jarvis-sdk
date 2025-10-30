@@ -160,6 +160,7 @@ export declare class realtimeChannelHandler {
     private onResponseInitiatorHandlers;
     private supabaseClient;
     private channel;
+    channel_name: string;
     private jarvisClient;
     private realtimeClient;
     onOutput(handler: (payload: {
@@ -192,9 +193,11 @@ export declare class realtimeChannelHandler {
         event: string;
         payload?: any;
     }): Promise<void>;
-    private setupSubscriptions;
+    private setupSubsriptions;
     testWebhookTrigger(client?: string): Promise<void>;
-    constructor(channelName: string, supabaseClient: SupabaseClient, realtimeClient: realtime, jarvisClient: JarvisClient);
+    constructor(channel: string, supabaseClient: SupabaseClient, realtimeClient: realtime, jarvisClient: JarvisClient);
+    connect(): Promise<void>;
+    disconnect(): Promise<void>;
 }
 export declare class realtime {
     private client;
