@@ -192,9 +192,9 @@ export declare class realtimeChannelHandler {
         event: string;
         payload?: any;
     }): Promise<void>;
-    private setupSubsriptions;
+    private setupSubscriptions;
     testWebhookTrigger(client?: string): Promise<void>;
-    constructor(channel: string, supabaseClient: SupabaseClient, realtimeClient: realtime, jarvisClient: JarvisClient);
+    constructor(channelName: string, supabaseClient: SupabaseClient, realtimeClient: realtime, jarvisClient: JarvisClient);
 }
 export declare class realtime {
     private client;
