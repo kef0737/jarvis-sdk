@@ -417,7 +417,7 @@ export class realtimeChannelHandler {
         });
     }
     async testWebhookTrigger(client) {
-        await this.realtimeClient.send_message({ type: "broadcast", event: `webhook-init-client-${client || this.jarvisClient.getConfig().client_id}`, payload: { type: "response_initiator", message: "This is a test webhook message." } });
+        await this.realtimeClient.send_message({ type: "broadcast", event: `webhook-init-client-${client || this.jarvisClient.getConfig().client_id}`, payload: { type: "response_initiator", message: `{ from: "webhook", alert: "passive", text: "This is a test of the websocket intergrations. Please announce to the user the test has succeeded." }` } });
     }
     constructor(channel, supabaseClient, realtimeClient, jarvisClient) {
         this.onMessageHandlers = []; // handlers for ALL incoming messages

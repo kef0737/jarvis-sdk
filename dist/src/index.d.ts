@@ -115,7 +115,7 @@ export declare class JarvisStream {
 }
 export interface JarvisStreamOptions {
     interrim?: boolean;
-    speech?: string | boolean;
+    speech?: string | boolean | any;
     model?: string;
     convo_updates?: boolean | string;
     save?: boolean;

@@ -504,7 +504,7 @@ export class JarvisStream {
 
 export interface JarvisStreamOptions {
   interrim?: boolean;  // Whether to provide interim results (default true)
-  speech?: string | boolean;    // Generate speech or not (default false) 
+  speech?: string | boolean | any;    // Generate speech or not (default false) 
   model?: string;      // Force model choice, otherwise user's default (default null)
   convo_updates?: boolean | string; // Send full conversation or just new messages
   save?: boolean;      // Save message or not (default true)
@@ -660,7 +660,7 @@ export class realtimeChannelHandler {
   }
 
   async testWebhookTrigger(client?: string): Promise<void> {
-    await this.realtimeClient.send_message({ type: "broadcast", event: `webhook-init-client-${client || this.jarvisClient.getConfig().client_id}`, payload: { type: "response_initiator", message: "This is a test webhook message." }});
+    await this.realtimeClient.send_message({ type: "broadcast", event: `webhook-init-client-${client || this.jarvisClient.getConfig().client_id}`, payload: { type: "response_initiator", message: `{ from: "webhook", alert: "passive", text: "This is a test of the websocket intergrations. Please announce to the user the test has succeeded." }` }});
   }
 
   constructor( channel: string, supabaseClient: SupabaseClient, realtimeClient: realtime, jarvisClient: JarvisClient ) {
