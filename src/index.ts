@@ -110,7 +110,7 @@ export class JarvisStream {
         if (tool?.name === "jarvis-tools__manage_session") {
           // read the content of the output
           const output = parse(tool?.output || "{}");
-          this.client.session_data.nlu = [ ...(output.session_data?.nlu || []).map((x: any) => String(x))  ];
+          this.client.session_data.nlu = [ ...(output.session_data?.nlu || []).filter((x:any) => new Date(x?.expires_at) > new Date()) ];
         }
       }
     },
@@ -761,7 +761,7 @@ export class JarvisClient {
   private baseUrl: string;
   public readonly jarvis: JarvisRequest;
   public readonly realtime: realtime;
-  public session_data: { nlu: string[] };
+  public session_data: { nlu: any[] };
   private supabaseClient: SupabaseClient;
 
   constructor(config: JarvisConfig = {}) {

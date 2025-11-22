@@ -32,7 +32,7 @@ export class JarvisStream {
                     if (tool?.name === "jarvis-tools__manage_session") {
                         // read the content of the output
                         const output = parse(tool?.output || "{}");
-                        this.client.session_data.nlu = [...(output.session_data?.nlu || []).map((x) => String(x))];
+                        this.client.session_data.nlu = [...(output.session_data?.nlu || []).filter((x) => new Date(x?.expires_at) > new Date())];
                     }
                 }
             },
