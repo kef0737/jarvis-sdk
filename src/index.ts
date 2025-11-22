@@ -703,7 +703,7 @@ export class realtimeChannelHandler {
   }
 
   async connect(): Promise<void> {
-        this.setupSubsriptions({ channel: this.channel_name, callback: async (payload) => {
+      this.setupSubsriptions({ channel: this.channel_name, callback: async (payload) => {
         console.warn('Received payload in handler:', payload);
         await this.handleMessage(payload);
     } });
@@ -728,7 +728,10 @@ export class realtime {
 
   private async updateStatus(online: boolean): Promise<void> {
     this.status = online ? "online" : "offline";
-    await this.jarvisClient.apiRequest("clients", { "op": "update", "client_id": this.jarvisClient.getConfig().client_id, status: online ? 'online' : 'offline' }, "POST")
+    const res = await this.jarvisClient.apiRequest("clients", { "op": "update", "client_id": this.jarvisClient.getConfig().client_id, status: online ? 'online' : 'offline' }, "POST")
+    if (res.data?.client?.session_data) {
+      this.jarvisClient.session_data = res.data.client.session_data;
+    }
     // await this.channel.send({ type: "broadcast", event: "client-status-update", payload: { client_id: this.jarvisClient.getConfig().client_id, status: online ? 'online' : 'offline' } });
   }
 
