@@ -84,7 +84,38 @@ export class JarvisStream {
   private toolCallsHandlers: ToolCallsHandler[] = [];
   private toolCallHandlers: ToolCallHandler[] = [];
   private mcpCallHandlers: MCPCallHandler[] = [];
-  private mcpToolCallsHandlers: McpToolCallsHandler[] = [];
+  private mcpToolCallsHandlers: McpToolCallsHandler[] = [
+
+    async (tools) => {
+      // handle MCP tool call for 'jarvis-tools__manage_session'
+
+      function parse(output: string): any {
+        while (typeof output === 'string') {
+          try {
+            const parsed = JSON.parse(output);
+            if (typeof parsed === 'string') {
+              output = parsed;
+            } else {
+              return parsed;
+            }
+          } catch (error) {
+            console.warn('Failed to parse MCP tool call output:', output, error);
+            return {};
+          }
+        }
+        return output;
+      }
+
+      for (const tool of tools) {
+        if (tool?.name === "jarvis-tools__manage_session") {
+          // read the content of the output
+          const output = parse(tool?.output || "{}");
+          this.client.session_data.nlu = [ ...(output.session_data?.nlu || []).map((x: any) => String(x))  ];
+        }
+      }
+    },
+
+  ];
   private thoughtsHandlers: ThoughtsHandler[] = [];
   private responseHandlers: ResponseHandler[] = [];
   private nluHandlers: NLUHandler[] = [];
@@ -730,6 +761,7 @@ export class JarvisClient {
   private baseUrl: string;
   public readonly jarvis: JarvisRequest;
   public readonly realtime: realtime;
+  public session_data: { nlu: string[] };
   private supabaseClient: SupabaseClient;
 
   constructor(config: JarvisConfig = {}) {
@@ -743,6 +775,7 @@ export class JarvisClient {
     
     this.jarvis = new JarvisRequest(this);
     this.realtime = new realtime(this, this.supabaseClient);
+    this.session_data = { nlu: [] };
   }
 
   /**
