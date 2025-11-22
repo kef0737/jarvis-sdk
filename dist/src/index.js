@@ -7,7 +7,36 @@ export class JarvisStream {
         this.toolCallsHandlers = [];
         this.toolCallHandlers = [];
         this.mcpCallHandlers = [];
-        this.mcpToolCallsHandlers = [];
+        this.mcpToolCallsHandlers = [
+            async (tools) => {
+                // handle MCP tool call for 'jarvis-tools__manage_session'
+                function parse(output) {
+                    while (typeof output === 'string') {
+                        try {
+                            const parsed = JSON.parse(output);
+                            if (typeof parsed === 'string') {
+                                output = parsed;
+                            }
+                            else {
+                                return parsed;
+                            }
+                        }
+                        catch (error) {
+                            console.warn('Failed to parse MCP tool call output:', output, error);
+                            return {};
+                        }
+                    }
+                    return output;
+                }
+                for (const tool of tools) {
+                    if (tool?.name === "jarvis-tools__manage_session") {
+                        // read the content of the output
+                        const output = parse(tool?.output || "{}");
+                        this.client.session_data.nlu = [...(output.session_data?.nlu || []).map((x) => String(x))];
+                    }
+                }
+            },
+        ];
         this.thoughtsHandlers = [];
         this.responseHandlers = [];
         this.nluHandlers = [];
@@ -487,6 +516,7 @@ export class JarvisClient {
         this.baseUrl = this.config.baseUrl;
         this.jarvis = new JarvisRequest(this);
         this.realtime = new realtime(this, this.supabaseClient);
+        this.session_data = { nlu: [] };
     }
     /**
      * Generate Text-to-Speech audio from text

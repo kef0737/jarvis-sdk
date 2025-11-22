@@ -222,6 +222,9 @@ export declare class JarvisClient {
     private baseUrl;
     readonly jarvis: JarvisRequest;
     readonly realtime: realtime;
+    session_data: {
+        nlu: string[];
+    };
     private supabaseClient;
     constructor(config?: JarvisConfig);
     /**
